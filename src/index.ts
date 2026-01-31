@@ -2,10 +2,12 @@
 
 import { createServer } from "node:http";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
+import fs from 'fs'
 
 const DEFAULT_API_BASE = "https://data.ssb.no/api/pxwebapi/v2";
 const DEFAULT_LANGUAGE = "no";
@@ -15,6 +17,7 @@ const DEFAULT_PORT = 3000;
 interface Args {
   url: string;
   port: number;
+  transport: 'http' | 'stdio';
 }
 
 const argv = yargs(hideBin(process.argv))
@@ -27,6 +30,12 @@ const argv = yargs(hideBin(process.argv))
     type: "number",
     description: "Port to listen on",
     default: DEFAULT_PORT,
+  })
+  .option("transport", {
+    type: "string",
+    description: "Transport method (http or stdio)",
+    choices: ["http", "stdio"],
+    default: "stdio",
   })
   .help()
   .parseSync() as Args;
@@ -52,9 +61,11 @@ async function makeRequest(url: string): Promise<Response> {
 }
 
 function createMcpServer(apiBase: string): McpServer {
+  const pkg = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf-8"));
+
   const server = new McpServer({
     name: "pxweb-mcp",
-    version: "1.0.0",
+    version: pkg.version
   });
 
   // Tool: search_tables
@@ -374,48 +385,56 @@ Use this to find newly published statistics.`,
 }
 
 async function main() {
-  const { url, port } = argv;
+  const { url, port, transport: transportType } = argv;
 
   const mcpServer = createMcpServer(url);
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: () => crypto.randomUUID(),
-  });
 
-  const httpServer = createServer(async (req, res) => {
-    const pathname = req.url?.split("?")[0] || "/";
-
-    // Health check endpoint
-    if (pathname === "/health") {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ status: "ok" }));
-      return;
-    }
-
-    // MCP endpoint
-    if (pathname === "/mcp") {
-      try {
-        await transport.handleRequest(req, res);
-      } catch (error) {
-        console.error("MCP error:", error);
-        if (!res.headersSent) {
-          res.writeHead(500, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "Internal server error" }));
-        }
-      }
-      return;
-    }
-
-    // Not found
-    res.writeHead(404, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: "Not found" }));
-  });
-
-  await mcpServer.connect(transport);
-
-  httpServer.listen(port, () => {
-    console.error(`PxWeb MCP Server running on http://localhost:${port}/mcp`);
+  if (transportType === "stdio") {
+    const transport = new StdioServerTransport();
+    await mcpServer.connect(transport);
+    console.error(`PxWeb MCP Server running on stdio`);
     console.error(`Using API: ${url}`);
-  });
+  } else {
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => crypto.randomUUID(),
+    });
+
+    const httpServer = createServer(async (req, res) => {
+      const pathname = req.url?.split("?")[0] || "/";
+
+      // Health check endpoint
+      if (pathname === "/health") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ status: "ok" }));
+        return;
+      }
+
+      // MCP endpoint
+      if (pathname === "/mcp") {
+        try {
+          await transport.handleRequest(req, res);
+        } catch (error) {
+          console.error("MCP error:", error);
+          if (!res.headersSent) {
+            res.writeHead(500, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "Internal server error" }));
+          }
+        }
+        return;
+      }
+
+      // Not found
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Not found" }));
+    });
+
+    await mcpServer.connect(transport);
+
+    httpServer.listen(port, () => {
+      console.error(`PxWeb MCP Server running on http://localhost:${port}/mcp`);
+      console.error(`Using API: ${url}`);
+    });
+  }
 }
 
 main().catch((error) => {

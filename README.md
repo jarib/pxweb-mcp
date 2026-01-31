@@ -5,10 +5,11 @@ MCP server for accessing statistical data via the PxWeb API v2.
 ## Quick Start
 
 ```bash
-npx @jarib/pxweb-mcp 
+npx -y @jarib/pxweb-mcp
+npx -y @jarib/pxweb-mcp --transport http --port 3000
 ```
 
-Server runs at `http://localhost:3000/mcp` using Statistics Norway (SSB) by default.
+
 
 ## Known PxWeb v2 Instances
 
