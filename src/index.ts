@@ -17,7 +17,7 @@ const DEFAULT_PORT = 3000;
 interface Args {
   url: string;
   port: number;
-  transport: 'http' | 'stdio';
+  transport: 'streamable-http' | 'stdio';
 }
 
 const argv = yargs(hideBin(process.argv))
@@ -33,8 +33,8 @@ const argv = yargs(hideBin(process.argv))
   })
   .option("transport", {
     type: "string",
-    description: "Transport method (http or stdio)",
-    choices: ["http", "stdio"],
+    description: "Transport method (streamable-http or stdio)",
+    choices: ["streamable-http", "stdio"],
     default: "stdio",
   })
   .help()
@@ -389,12 +389,7 @@ async function main() {
 
   const mcpServer = createMcpServer(url);
 
-  if (transportType === "stdio") {
-    const transport = new StdioServerTransport();
-    await mcpServer.connect(transport);
-    console.error(`PxWeb MCP Server running on stdio`);
-    console.error(`Using API: ${url}`);
-  } else {
+  if (transportType === "streamable-http") {
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => crypto.randomUUID(),
     });
@@ -434,6 +429,11 @@ async function main() {
       console.error(`PxWeb MCP Server running on http://localhost:${port}/mcp`);
       console.error(`Using API: ${url}`);
     });
+  } else {
+    const transport = new StdioServerTransport();
+    await mcpServer.connect(transport);
+    console.error(`PxWeb MCP Server running on stdio`);
+    console.error(`Using API: ${url}`);
   }
 }
 

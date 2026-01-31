@@ -6,7 +6,7 @@ MCP server for accessing statistical data via the PxWeb API v2.
 
 ```bash
 npx -y @jarib/pxweb-mcp
-npx -y @jarib/pxweb-mcp --transport http --port 3000
+npx -y @jarib/pxweb-mcp --transport streamable-http --port 3000
 ```
 
 
