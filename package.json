@@ -1,15 +1,16 @@
 {
   "name": "@jarib/pxweb-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server for accessing statistical data via the PxWeb API v2",
   "type": "module",
   "main": "build/index.js",
   "bin": {
-    "pxweb-mcp": "./build/index.js"
+    "pxweb-mcp": "build/index.js"
   },
   "scripts": {
     "build": "tsc",
-    "start": "node build/index.js"
+    "start": "node build/index.js",
+    "prepublishOnly": "npm run build"
   },
   "files": [
     "build"
