@@ -1,7 +1,7 @@
 {
-  "name": "pxweb-mcp",
+  "name": "@jarib/pxweb-mcp",
   "version": "1.0.0",
-  "description": "MCP server for accessing Statistics Norway (SSB) via the PxWeb API",
+  "description": "MCP server for accessing statistical data via the PxWeb API v2",
   "type": "module",
   "main": "build/index.js",
   "bin": {
